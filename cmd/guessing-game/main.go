@@ -13,8 +13,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	repository := repo.NewJSONHighScoreRepository("data/highscores.json")
 	hsService := service.NewHighScoreService(repository)
 
