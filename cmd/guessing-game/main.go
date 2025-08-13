@@ -106,8 +106,12 @@ func getChancesByDifficulty(level domain.Level) int {
 func playGame(secret, chances int) (bool, int) {
 	hintUsed := false
 
+	fmt.Println("Hint available once: enter -1 to use it.")
+	fmt.Println()
+
 	for i := 1; i <= chances; i++ {
-		fmt.Printf("Attempt %d/%d — guess (-1 = hint): ", i, chances)
+		fmt.Printf("Attempt %d/%d — guess: ", i, chances)
+
 		var guess int
 		fmt.Scanln(&guess)
 
@@ -118,6 +122,7 @@ func playGame(secret, chances int) (bool, int) {
 			} else {
 				fmt.Println("Hint already used.")
 				fmt.Println()
+				i--
 			}
 			continue
 		}
