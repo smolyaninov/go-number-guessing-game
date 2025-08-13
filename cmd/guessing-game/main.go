@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+var highScores = map[string]int{
+	"Easy":   0,
+	"Medium": 0,
+	"Hard":   0,
+}
+
 func main() {
 	fmt.Println("🎯 Welcome to the Number Guessing Game!")
 	fmt.Println("I'm thinking of a number between 1 and 100.")
@@ -17,21 +23,34 @@ func main() {
 		chances := getChancesByDifficulty(difficulty)
 		secret := rand.Intn(100) + 1
 
+		if hs := highScores[difficulty]; hs > 0 {
+			fmt.Printf("🏆 Current high score for %s: %d attempt(s)\n", difficulty, hs)
+		} else {
+			fmt.Printf("🏆 No high score yet for %s. Be the first!\n", difficulty)
+		}
+
 		fmt.Printf("\nGreat! You selected %s. You have %d chances.\n", difficulty, chances)
 
 		startTime := time.Now()
 
-		win := playGame(secret, chances)
+		win, attempts := playGame(secret, chances)
 
 		duration := time.Since(startTime).Seconds()
 
 		if win {
 			fmt.Println("🎉 Congratulations! You guessed the correct number!")
+
+			if highScores[difficulty] == 0 || attempts < highScores[difficulty] {
+				highScores[difficulty] = attempts
+				fmt.Printf("🥇 New high score for %s: %d attempt(s)!\n", difficulty, attempts)
+			}
 		} else {
 			fmt.Printf("💀 You've run out of chances. The number was %d.\n", secret)
 		}
 
 		fmt.Printf("🕐 You spent %.2f seconds.\n", duration)
+
+		printHighScores()
 
 		var again string
 		fmt.Print("\nDo you want to play again? (y/n): ")
@@ -80,7 +99,7 @@ func getChancesByDifficulty(level string) int {
 	}
 }
 
-func playGame(secret, chances int) bool {
+func playGame(secret, chances int) (bool, int) {
 	hintUsed := false
 
 	fmt.Println("💡 You have 1 hint available! Enter -1 to use it.")
@@ -97,20 +116,19 @@ func playGame(secret, chances int) bool {
 			} else {
 				fmt.Println("You already used your hint!")
 			}
-			i--
 			continue
 		}
 
 		if guess == secret {
 			fmt.Printf("✅ Correct! You guessed it in %d attempts.\n", i)
-			return true
+			return true, i
 		} else if guess < secret {
 			fmt.Println("🔺 Too low. Try a higher number.")
 		} else {
 			fmt.Println("🔻 Too high. Try a lower number.")
 		}
 	}
-	return false
+	return false, chances
 }
 
 func printHint(secret int) {
@@ -149,4 +167,17 @@ func printHint(secret int) {
 	} else {
 		fmt.Println("⚖️ It's an odd number.")
 	}
+}
+
+func printHighScores() {
+	fmt.Println("\n===== High Scores =====")
+	for _, level := range []string{"Easy", "Medium", "Hard"} {
+		hs := highScores[level]
+		if hs > 0 {
+			fmt.Printf("%-6s: %d attempt(s)\n", level, hs)
+		} else {
+			fmt.Printf("%-6s: —\n", level)
+		}
+	}
+	fmt.Println("=======================")
 }
