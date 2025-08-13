@@ -1,3 +1,6 @@
 # IDE (GoLand, VSCode)
 .idea/
 .vscode/
+
+# Data
+data/

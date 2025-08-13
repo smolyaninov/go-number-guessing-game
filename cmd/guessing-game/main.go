@@ -3,16 +3,19 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
+	"text/tabwriter"
 	"time"
+
+	"github.com/smolyaninov/go-number-guessing-game/internal/domain"
+	"github.com/smolyaninov/go-number-guessing-game/internal/repo"
+	"github.com/smolyaninov/go-number-guessing-game/internal/service"
 )
 
-var highScores = map[string]int{
-	"Easy":   0,
-	"Medium": 0,
-	"Hard":   0,
-}
-
 func main() {
+	repository := repo.NewJSONHighScoreRepository("data/highscores.json")
+	hsService := service.NewHighScoreService(repository)
+
 	fmt.Println("🎯 Welcome to the Number Guessing Game!")
 	fmt.Println("I'm thinking of a number between 1 and 100.")
 	fmt.Println("You have to guess it based on the difficulty you choose.")
@@ -23,26 +26,31 @@ func main() {
 		chances := getChancesByDifficulty(difficulty)
 		secret := rand.Intn(100) + 1
 
-		if hs := highScores[difficulty]; hs > 0 {
-			fmt.Printf("🏆 Current high score for %s: %d attempt(s)\n", difficulty, hs)
+		if hs, err := hsService.Get(); err == nil {
+			e := hs[difficulty]
+			if e.Attempts > 0 {
+				fmt.Printf("🏆 Current high score for %s: %d attempt(s), %.2fs (%s)\n",
+					difficulty, e.Attempts, e.DurationSeconds, e.AchievedAt.Format(time.RFC3339))
+			} else {
+				fmt.Printf("🏆 No high score yet for %s. Be the first!\n", difficulty)
+			}
 		} else {
-			fmt.Printf("🏆 No high score yet for %s. Be the first!\n", difficulty)
+			fmt.Printf("Could not load high scores: %v\n", err)
 		}
 
 		fmt.Printf("\nGreat! You selected %s. You have %d chances.\n", difficulty, chances)
 
 		startTime := time.Now()
-
 		win, attempts := playGame(secret, chances)
-
 		duration := time.Since(startTime).Seconds()
 
 		if win {
 			fmt.Println("🎉 Congratulations! You guessed the correct number!")
 
-			if highScores[difficulty] == 0 || attempts < highScores[difficulty] {
-				highScores[difficulty] = attempts
-				fmt.Printf("🥇 New high score for %s: %d attempt(s)!\n", difficulty, attempts)
+			if updated, err := hsService.UpdateIfBetter(difficulty, attempts, duration); err != nil {
+				fmt.Printf("Failed to update high score: %v\n", err)
+			} else if updated {
+				fmt.Printf("🥇 New high score for %s: %d attempt(s), %.2fs!\n", difficulty, attempts, duration)
 			}
 		} else {
 			fmt.Printf("💀 You've run out of chances. The number was %d.\n", secret)
@@ -50,7 +58,11 @@ func main() {
 
 		fmt.Printf("🕐 You spent %.2f seconds.\n", duration)
 
-		printHighScores()
+		if hs, err := hsService.Get(); err == nil {
+			printHighScores(hs)
+		} else {
+			fmt.Printf("Could not load high scores: %v\n", err)
+		}
 
 		var again string
 		fmt.Print("\nDo you want to play again? (y/n): ")
@@ -62,7 +74,7 @@ func main() {
 	}
 }
 
-func selectDifficulty() string {
+func selectDifficulty() domain.Level {
 	for {
 		fmt.Println("Select difficulty:")
 		fmt.Println("1. Easy (10 chances)")
@@ -75,24 +87,24 @@ func selectDifficulty() string {
 
 		switch choice {
 		case 1:
-			return "Easy"
+			return domain.LevelEasy
 		case 2:
-			return "Medium"
+			return domain.LevelMedium
 		case 3:
-			return "Hard"
+			return domain.LevelHard
 		default:
 			fmt.Println("Invalid choice. Please try again.")
 		}
 	}
 }
 
-func getChancesByDifficulty(level string) int {
+func getChancesByDifficulty(level domain.Level) int {
 	switch level {
-	case "Easy":
+	case domain.LevelEasy:
 		return 10
-	case "Medium":
+	case domain.LevelMedium:
 		return 5
-	case "Hard":
+	case domain.LevelHard:
 		return 3
 	default:
 		return 5
@@ -101,7 +113,6 @@ func getChancesByDifficulty(level string) int {
 
 func playGame(secret, chances int) (bool, int) {
 	hintUsed := false
-
 	fmt.Println("💡 You have 1 hint available! Enter -1 to use it.")
 
 	for i := 1; i <= chances; i++ {
@@ -134,8 +145,7 @@ func playGame(secret, chances int) (bool, int) {
 func printHint(secret int) {
 	const minVal, maxVal = 1, 100
 
-	span := rand.Intn(9) + 6 // [6..14]
-
+	span := rand.Intn(9) + 6        // [6..14]
 	offset := rand.Intn(span-1) + 1 // [1..span-1]
 
 	low := secret - offset
@@ -169,15 +179,28 @@ func printHint(secret int) {
 	}
 }
 
-func printHighScores() {
+func printHighScores(hs map[domain.Level]domain.HighScore) {
 	fmt.Println("\n===== High Scores =====")
-	for _, level := range []string{"Easy", "Medium", "Hard"} {
-		hs := highScores[level]
-		if hs > 0 {
-			fmt.Printf("%-6s: %d attempt(s)\n", level, hs)
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "LEVEL\tATTEMPTS\tDURATION(s)\tDATE")
+
+	for _, lvl := range domain.AllLevels() {
+		e := hs[lvl]
+		if e.Attempts > 0 {
+			fmt.Fprintf(
+				w,
+				"%s\t%d\t%.2f\t%s\n",
+				lvl,
+				e.Attempts,
+				e.DurationSeconds,
+				e.AchievedAt.Format("2006-01-02 15:04:05"),
+			)
 		} else {
-			fmt.Printf("%-6s: —\n", level)
+			fmt.Fprintf(w, "%s\t—\t—\t—\n", lvl)
 		}
 	}
+
+	w.Flush()
 	fmt.Println("=======================")
 }
