@@ -13,74 +13,67 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	repository := repo.NewJSONHighScoreRepository("data/highscores.json")
 	hsService := service.NewHighScoreService(repository)
 
-	fmt.Println("🎯 Welcome to the Number Guessing Game!")
-	fmt.Println("I'm thinking of a number between 1 and 100.")
-	fmt.Println("You have to guess it based on the difficulty you choose.")
+	fmt.Println("🎯 Number Guessing Game — guess a number between 1 and 100.")
 	fmt.Println()
 
 	for {
-		difficulty := selectDifficulty()
-		chances := getChancesByDifficulty(difficulty)
+		level := selectDifficulty()
+		chances := getChancesByDifficulty(level)
 		secret := rand.Intn(100) + 1
 
 		if hs, err := hsService.Get(); err == nil {
-			e := hs[difficulty]
-			if e.Attempts > 0 {
-				fmt.Printf("🏆 Current high score for %s: %d attempt(s), %.2fs (%s)\n",
-					difficulty, e.Attempts, e.DurationSeconds, e.AchievedAt.Format(time.RFC3339))
-			} else {
-				fmt.Printf("🏆 No high score yet for %s. Be the first!\n", difficulty)
+			if e := hs[level]; e.Attempts > 0 {
+				fmt.Printf("\n🏆 %s high score: %d attempts, %.2fs (%s)\n",
+					level, e.Attempts, e.DurationSeconds, e.AchievedAt.Format("2006-01-02 15:04"))
 			}
-		} else {
-			fmt.Printf("Could not load high scores: %v\n", err)
 		}
 
-		fmt.Printf("\nGreat! You selected %s. You have %d chances.\n", difficulty, chances)
+		fmt.Printf("\nLevel: %s • Chances: %d\n\n", level, chances)
 
-		startTime := time.Now()
+		start := time.Now()
 		win, attempts := playGame(secret, chances)
-		duration := time.Since(startTime).Seconds()
+		duration := time.Since(start).Seconds()
 
+		fmt.Println()
 		if win {
-			fmt.Println("🎉 Congratulations! You guessed the correct number!")
-
-			if updated, err := hsService.UpdateIfBetter(difficulty, attempts, duration); err != nil {
-				fmt.Printf("Failed to update high score: %v\n", err)
-			} else if updated {
-				fmt.Printf("🥇 New high score for %s: %d attempt(s), %.2fs!\n", difficulty, attempts, duration)
+			fmt.Printf("✅ Correct in %d attempt(s). Time: %.2fs\n", attempts, duration)
+			if updated, err := hsService.UpdateIfBetter(level, attempts, duration); err == nil && updated {
+				fmt.Println("🥇 High score updated.")
+			} else if err != nil {
+				fmt.Printf("! High score save failed: %v\n", err)
 			}
 		} else {
-			fmt.Printf("💀 You've run out of chances. The number was %d.\n", secret)
+			fmt.Printf("💀 Out of chances. Number was %d. Time: %.2fs\n", secret, duration)
 		}
-
-		fmt.Printf("🕐 You spent %.2f seconds.\n", duration)
 
 		if hs, err := hsService.Get(); err == nil {
+			fmt.Println()
 			printHighScores(hs)
-		} else {
-			fmt.Printf("Could not load high scores: %v\n", err)
 		}
 
+		fmt.Print("\nPlay again? (y/n): ")
 		var again string
-		fmt.Print("\nDo you want to play again? (y/n): ")
 		fmt.Scanln(&again)
 		if again != "y" && again != "Y" {
-			fmt.Println("Thanks for playing!")
-			break
+			fmt.Println("\nBye!")
+			return
 		}
+		fmt.Println()
 	}
 }
 
 func selectDifficulty() domain.Level {
 	for {
 		fmt.Println("Select difficulty:")
-		fmt.Println("1. Easy (10 chances)")
-		fmt.Println("2. Medium (5 chances)")
-		fmt.Println("3. Hard (3 chances)")
-		fmt.Print("Enter choice (1/2/3): ")
+		fmt.Println("\t1. Easy (10 chances)")
+		fmt.Println("\t2. Medium (5 chances)")
+		fmt.Println("\t3. Hard (3 chances)")
+		fmt.Print("\nEnter choice (1/2/3): ")
 
 		var choice int
 		fmt.Scanln(&choice)
@@ -93,7 +86,8 @@ func selectDifficulty() domain.Level {
 		case 3:
 			return domain.LevelHard
 		default:
-			fmt.Println("Invalid choice. Please try again.")
+			fmt.Println("Invalid choice, try again.")
+			fmt.Println()
 		}
 	}
 }
@@ -113,11 +107,10 @@ func getChancesByDifficulty(level domain.Level) int {
 
 func playGame(secret, chances int) (bool, int) {
 	hintUsed := false
-	fmt.Println("💡 You have 1 hint available! Enter -1 to use it.")
 
 	for i := 1; i <= chances; i++ {
+		fmt.Printf("Attempt %d/%d — guess (-1 = hint): ", i, chances)
 		var guess int
-		fmt.Printf("Attempt %d: Enter your guess: ", i)
 		fmt.Scanln(&guess)
 
 		if guess == -1 {
@@ -125,18 +118,21 @@ func playGame(secret, chances int) (bool, int) {
 				printHint(secret)
 				hintUsed = true
 			} else {
-				fmt.Println("You already used your hint!")
+				fmt.Println("Hint already used.")
+				fmt.Println()
 			}
 			continue
 		}
 
 		if guess == secret {
-			fmt.Printf("✅ Correct! You guessed it in %d attempts.\n", i)
 			return true, i
-		} else if guess < secret {
-			fmt.Println("🔺 Too low. Try a higher number.")
+		}
+		if guess < secret {
+			fmt.Println("Higher")
+			fmt.Println()
 		} else {
-			fmt.Println("🔻 Too high. Try a lower number.")
+			fmt.Println("Lower")
+			fmt.Println()
 		}
 	}
 	return false, chances
@@ -144,7 +140,6 @@ func playGame(secret, chances int) (bool, int) {
 
 func printHint(secret int) {
 	const minVal, maxVal = 1, 100
-
 	span := rand.Intn(9) + 6        // [6..14]
 	offset := rand.Intn(span-1) + 1 // [1..span-1]
 
@@ -161,7 +156,6 @@ func printHint(secret int) {
 		low -= shift
 		high -= shift
 	}
-
 	if low > secret {
 		low = secret
 	}
@@ -169,38 +163,27 @@ func printHint(secret int) {
 		high = secret
 	}
 
-	fmt.Println("💡 Hint:")
-	fmt.Printf("👉 The number is between %d and %d.\n", low, high)
+	fmt.Printf("\n💡 Hint: %d..%d; %s\n\n", low, high, parity(secret))
+}
 
-	if secret%2 == 0 {
-		fmt.Println("⚖️ It's an even number.")
-	} else {
-		fmt.Println("⚖️ It's an odd number.")
+func parity(n int) string {
+	if n%2 == 0 {
+		return "even"
 	}
+	return "odd"
 }
 
 func printHighScores(hs map[domain.Level]domain.HighScore) {
-	fmt.Println("\n===== High Scores =====")
-
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "LEVEL\tATTEMPTS\tDURATION(s)\tDATE")
-
 	for _, lvl := range domain.AllLevels() {
 		e := hs[lvl]
 		if e.Attempts > 0 {
-			fmt.Fprintf(
-				w,
-				"%s\t%d\t%.2f\t%s\n",
-				lvl,
-				e.Attempts,
-				e.DurationSeconds,
-				e.AchievedAt.Format("2006-01-02 15:04:05"),
-			)
+			fmt.Fprintf(w, "%s\t%d\t%.2f\t%s\n",
+				lvl, e.Attempts, e.DurationSeconds, e.AchievedAt.Format("2006-01-02 15:04"))
 		} else {
 			fmt.Fprintf(w, "%s\t—\t—\t—\n", lvl)
 		}
 	}
-
 	w.Flush()
-	fmt.Println("=======================")
 }
