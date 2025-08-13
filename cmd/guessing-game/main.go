@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 func main() {
-
 	fmt.Println("🎯 Welcome to the Number Guessing Game!")
 	fmt.Println("I'm thinking of a number between 1 and 100.")
 	fmt.Println("You have to guess it based on the difficulty you choose.")
@@ -19,12 +19,19 @@ func main() {
 
 		fmt.Printf("\nGreat! You selected %s. You have %d chances.\n", difficulty, chances)
 
+		startTime := time.Now()
+
 		win := playGame(secret, chances)
+
+		duration := time.Since(startTime).Seconds()
+
 		if win {
 			fmt.Println("🎉 Congratulations! You guessed the correct number!")
 		} else {
 			fmt.Printf("💀 You've run out of chances. The number was %d.\n", secret)
 		}
+
+		fmt.Printf("🕐 You spent %.2f seconds.\n", duration)
 
 		var again string
 		fmt.Print("\nDo you want to play again? (y/n): ")
