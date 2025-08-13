@@ -81,10 +81,25 @@ func getChancesByDifficulty(level string) int {
 }
 
 func playGame(secret, chances int) bool {
+	hintUsed := false
+
+	fmt.Println("💡 You have 1 hint available! Enter -1 to use it.")
+
 	for i := 1; i <= chances; i++ {
 		var guess int
 		fmt.Printf("Attempt %d: Enter your guess: ", i)
 		fmt.Scanln(&guess)
+
+		if guess == -1 {
+			if !hintUsed {
+				printHint(secret)
+				hintUsed = true
+			} else {
+				fmt.Println("You already used your hint!")
+			}
+			i--
+			continue
+		}
 
 		if guess == secret {
 			fmt.Printf("✅ Correct! You guessed it in %d attempts.\n", i)
@@ -96,4 +111,42 @@ func playGame(secret, chances int) bool {
 		}
 	}
 	return false
+}
+
+func printHint(secret int) {
+	const minVal, maxVal = 1, 100
+
+	span := rand.Intn(9) + 6 // [6..14]
+
+	offset := rand.Intn(span-1) + 1 // [1..span-1]
+
+	low := secret - offset
+	high := low + span
+
+	if low < minVal {
+		shift := minVal - low
+		low += shift
+		high += shift
+	}
+	if high > maxVal {
+		shift := high - maxVal
+		low -= shift
+		high -= shift
+	}
+
+	if low > secret {
+		low = secret
+	}
+	if high < secret {
+		high = secret
+	}
+
+	fmt.Println("💡 Hint:")
+	fmt.Printf("👉 The number is between %d and %d.\n", low, high)
+
+	if secret%2 == 0 {
+		fmt.Println("⚖️ It's an even number.")
+	} else {
+		fmt.Println("⚖️ It's an odd number.")
+	}
 }
