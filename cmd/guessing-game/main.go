@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/smolyaninov/go-number-guessing-game/internal/domain"
+	"github.com/smolyaninov/go-number-guessing-game/internal/game"
 	"github.com/smolyaninov/go-number-guessing-game/internal/input"
 	"github.com/smolyaninov/go-number-guessing-game/internal/repo"
 	"github.com/smolyaninov/go-number-guessing-game/internal/service"
@@ -34,8 +35,9 @@ func main() {
 
 		fmt.Printf("\nLevel: %s • Chances: %d\n\n", level, chances)
 
+		engine := game.NewEngine(1, 100, secret, chances)
 		start := time.Now()
-		win, attempts := playGame(secret, chances)
+		win, attempts := playGame(engine)
 		duration := time.Since(start).Seconds()
 
 		fmt.Println()
@@ -110,14 +112,14 @@ func getChancesByDifficulty(level domain.Level) int {
 	}
 }
 
-func playGame(secret, chances int) (bool, int) {
+func playGame(e *game.Engine) (bool, int) {
 	hintUsed := false
 
 	fmt.Println("Hint available once: enter -1 to use it.")
 	fmt.Println()
 
-	for i := 1; i <= chances; i++ {
-		guess, err := input.ReadInt(fmt.Sprintf("Attempt %d/%d: ", i, chances))
+	for i := 1; i <= e.Chances; i++ {
+		guess, err := input.ReadInt(fmt.Sprintf("Attempt %d/%d: ", i, e.Chances))
 		if err != nil {
 			fmt.Println("Invalid input, please enter a number.")
 			fmt.Println()
@@ -127,7 +129,8 @@ func playGame(secret, chances int) (bool, int) {
 
 		if guess == -1 {
 			if !hintUsed {
-				printHint(secret)
+				low, high := e.HintRange()
+				fmt.Printf("\n💡 Hint: %d..%d; %s\n\n", low, high, game.Parity(e.Secret))
 				hintUsed = true
 			} else {
 				fmt.Println("Hint already used.")
@@ -137,53 +140,24 @@ func playGame(secret, chances int) (bool, int) {
 			continue
 		}
 
-		if guess == secret {
-			return true, i
+		if !e.InRange(guess) {
+			fmt.Printf("Enter a number between %d and %d.\n\n", e.Min, e.Max)
+			continue
 		}
-		if guess < secret {
+
+		switch e.Compare(guess) {
+		case 0:
+			return true, i
+
+		case -1:
 			fmt.Println("Higher")
 			fmt.Println()
-		} else {
+		case 1:
 			fmt.Println("Lower")
 			fmt.Println()
 		}
 	}
-	return false, chances
-}
-
-func printHint(secret int) {
-	const minVal, maxVal = 1, 100
-	span := rand.Intn(9) + 6        // [6..14]
-	offset := rand.Intn(span-1) + 1 // [1..span-1]
-
-	low := secret - offset
-	high := low + span
-
-	if low < minVal {
-		shift := minVal - low
-		low += shift
-		high += shift
-	}
-	if high > maxVal {
-		shift := high - maxVal
-		low -= shift
-		high -= shift
-	}
-	if low > secret {
-		low = secret
-	}
-	if high < secret {
-		high = secret
-	}
-
-	fmt.Printf("\n💡 Hint: %d..%d; %s\n\n", low, high, parity(secret))
-}
-
-func parity(n int) string {
-	if n%2 == 0 {
-		return "even"
-	}
-	return "odd"
+	return false, e.Chances
 }
 
 func printHighScores(hs map[domain.Level]domain.HighScore) {
