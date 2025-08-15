@@ -21,28 +21,34 @@ var chancesByLevel = map[domain.Level]int{
 	domain.LevelHard:   3,
 }
 
+const (
+	rangeMin   = 1
+	rangeMax   = 100
+	timeFormat = "2006-01-02 15:04"
+)
+
 func main() {
 	repository := repo.NewJSONHighScoreRepository("data/highscores.json")
 	hsService := service.NewHighScoreService(repository)
 
-	fmt.Println("🎯 Number Guessing Game — guess a number between 1 and 100.")
+	fmt.Printf("🎯 Number Guessing Game — guess a number between %d and %d.\n", rangeMin, rangeMax)
 	fmt.Println()
 
 	for {
 		level := selectDifficulty()
 		chances := getChancesByDifficulty(level)
-		secret := rand.Intn(100) + 1
+		secret := rand.Intn(rangeMax-rangeMin+1) + rangeMin
 
 		if hs, err := hsService.Get(); err == nil {
 			if e := hs[level]; e.Attempts > 0 {
 				fmt.Printf("\n🏆 %s high score: %d attempts, %.2fs (%s)\n",
-					level, e.Attempts, e.DurationSeconds, e.AchievedAt.Format("2006-01-02 15:04"))
+					level, e.Attempts, e.DurationSeconds, e.AchievedAt.Format(timeFormat))
 			}
 		}
 
-		fmt.Printf("\nLevel: %s • Chances: %d\n\n", level, chances)
+		fmt.Printf("\nLevel: %s • Chances: %d • Range: %d..%d\n\n", level, chances, rangeMin, rangeMax)
 
-		engine := game.NewEngine(1, 100, secret, chances)
+		engine := game.NewEngine(rangeMin, rangeMax, secret, chances)
 		start := time.Now()
 		win, attempts := playGame(engine)
 		duration := time.Since(start).Seconds()
@@ -169,7 +175,7 @@ func printHighScores(hs map[domain.Level]domain.HighScore) {
 		e := hs[lvl]
 		if e.Attempts > 0 {
 			fmt.Fprintf(w, "%s\t%d\t%.2f\t%s\n",
-				lvl, e.Attempts, e.DurationSeconds, e.AchievedAt.Format("2006-01-02 15:04"))
+				lvl, e.Attempts, e.DurationSeconds, e.AchievedAt.Format(timeFormat))
 		} else {
 			fmt.Fprintf(w, "%s\t—\t—\t—\n", lvl)
 		}
