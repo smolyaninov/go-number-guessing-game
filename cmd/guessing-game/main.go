@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -13,6 +14,12 @@ import (
 	"github.com/smolyaninov/go-number-guessing-game/internal/repo"
 	"github.com/smolyaninov/go-number-guessing-game/internal/service"
 )
+
+var chancesByLevel = map[domain.Level]int{
+	domain.LevelEasy:   10,
+	domain.LevelMedium: 5,
+	domain.LevelHard:   3,
+}
 
 func main() {
 	repository := repo.NewJSONHighScoreRepository("data/highscores.json")
@@ -63,7 +70,7 @@ func main() {
 			fmt.Println()
 			continue
 		}
-		if ans != "y" && ans != "Y" {
+		if !strings.EqualFold(ans, "y") && !strings.EqualFold(ans, "yes") {
 			fmt.Println("\nBye!")
 			return
 		}
@@ -100,16 +107,10 @@ func selectDifficulty() domain.Level {
 }
 
 func getChancesByDifficulty(level domain.Level) int {
-	switch level {
-	case domain.LevelEasy:
-		return 10
-	case domain.LevelMedium:
-		return 5
-	case domain.LevelHard:
-		return 3
-	default:
-		return 5
+	if v, ok := chancesByLevel[level]; ok {
+		return v
 	}
+	return 5
 }
 
 func playGame(e *game.Engine) (bool, int) {
@@ -142,6 +143,7 @@ func playGame(e *game.Engine) (bool, int) {
 
 		if !e.InRange(guess) {
 			fmt.Printf("Enter a number between %d and %d.\n\n", e.Min, e.Max)
+			i--
 			continue
 		}
 
