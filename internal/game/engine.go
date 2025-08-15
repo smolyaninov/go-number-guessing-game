@@ -28,7 +28,7 @@ func (e *Engine) Compare(guess int) int {
 }
 
 func (e *Engine) HintRange() (low, high int) {
-	span := rand.Intn(9) + 6        // [rangeMin..rangeMax]
+	span := rand.Intn(9) + 6        // [6..14]
 	offset := rand.Intn(span-1) + 1 // [1..span-1]
 
 	low = e.Secret - offset
