@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/smolyaninov/go-number-guessing-game/internal/domain"
+	"github.com/smolyaninov/go-number-guessing-game/internal/input"
 	"github.com/smolyaninov/go-number-guessing-game/internal/repo"
 	"github.com/smolyaninov/go-number-guessing-game/internal/service"
 )
@@ -54,10 +55,13 @@ func main() {
 			printHighScores(hs)
 		}
 
-		fmt.Print("\nPlay again? (y/n): ")
-		var again string
-		fmt.Scanln(&again)
-		if again != "y" && again != "Y" {
+		ans, err := input.ReadString("Play again? (y/n): ")
+		if err != nil {
+			fmt.Println("Invalid input, please enter Y or N.")
+			fmt.Println()
+			continue
+		}
+		if ans != "y" && ans != "Y" {
 			fmt.Println("\nBye!")
 			return
 		}
@@ -71,10 +75,13 @@ func selectDifficulty() domain.Level {
 		fmt.Println("\t1. Easy (10 chances)")
 		fmt.Println("\t2. Medium (5 chances)")
 		fmt.Println("\t3. Hard (3 chances)")
-		fmt.Print("\nEnter choice (1/2/3): ")
 
-		var choice int
-		fmt.Scanln(&choice)
+		choice, err := input.ReadInt("\nEnter choice (1/2/3): ")
+		if err != nil {
+			fmt.Println("Invalid input, please enter 1, 2 or 3.")
+			fmt.Println()
+			continue
+		}
 
 		switch choice {
 		case 1:
@@ -110,10 +117,13 @@ func playGame(secret, chances int) (bool, int) {
 	fmt.Println()
 
 	for i := 1; i <= chances; i++ {
-		fmt.Printf("Attempt %d/%d — guess: ", i, chances)
-
-		var guess int
-		fmt.Scanln(&guess)
+		guess, err := input.ReadInt(fmt.Sprintf("Attempt %d/%d: ", i, chances))
+		if err != nil {
+			fmt.Println("Invalid input, please enter a number.")
+			fmt.Println()
+			i--
+			continue
+		}
 
 		if guess == -1 {
 			if !hintUsed {
