@@ -53,9 +53,12 @@ func (e *Engine) HintRange() (low, high int) {
 	return
 }
 
-func Parity(n int) string {
-	if n%2 == 0 {
-		return "even"
+func (e *Engine) Hint() (low int, high int, party string) {
+	low, high = e.HintRange()
+	if e.Secret%2 == 0 {
+		party = "even"
+	} else {
+		party = "odd"
 	}
-	return "odd"
+	return
 }

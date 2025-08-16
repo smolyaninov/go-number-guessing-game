@@ -123,8 +123,8 @@ func playGame(e *game.Engine) (bool, int) {
 
 		if guess == -1 {
 			if !hintUsed {
-				low, high := e.HintRange()
-				fmt.Printf("\n💡 Hint: %d..%d; %s\n\n", low, high, game.Parity(e.Secret))
+				low, high, par := e.Hint()
+				fmt.Printf("\n💡 Hint: %d..%d; %s\n\n", low, high, par)
 				hintUsed = true
 			} else {
 				fmt.Println("Hint already used.")
