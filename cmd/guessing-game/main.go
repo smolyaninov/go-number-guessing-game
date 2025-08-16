@@ -15,12 +15,6 @@ import (
 	"github.com/smolyaninov/go-number-guessing-game/internal/service"
 )
 
-var chancesByLevel = map[domain.Level]int{
-	domain.LevelEasy:   10,
-	domain.LevelMedium: 5,
-	domain.LevelHard:   3,
-}
-
 const (
 	rangeMin   = 1
 	rangeMax   = 100
@@ -36,7 +30,7 @@ func main() {
 
 	for {
 		level := selectDifficulty()
-		chances := getChancesByDifficulty(level)
+		chances := domain.ChancesByLevel(level)
 		secret := rand.Intn(rangeMax-rangeMin+1) + rangeMin
 
 		if hs, err := hsService.Get(); err == nil {
@@ -87,9 +81,9 @@ func main() {
 func selectDifficulty() domain.Level {
 	for {
 		fmt.Println("Select difficulty:")
-		fmt.Println("\t1. Easy (10 chances)")
-		fmt.Println("\t2. Medium (5 chances)")
-		fmt.Println("\t3. Hard (3 chances)")
+		fmt.Printf("\t1. Easy (%d chances)\n", domain.ChancesEasy)
+		fmt.Printf("\t2. Medium (%d chances)\n", domain.ChancesMedium)
+		fmt.Printf("\t3. Hard (%d chances)\n", domain.ChancesHard)
 
 		choice, err := input.ReadInt("\nEnter choice (1/2/3): ")
 		if err != nil {
@@ -110,13 +104,6 @@ func selectDifficulty() domain.Level {
 			fmt.Println()
 		}
 	}
-}
-
-func getChancesByDifficulty(level domain.Level) int {
-	if v, ok := chancesByLevel[level]; ok {
-		return v
-	}
-	return 5
 }
 
 func playGame(e *game.Engine) (bool, int) {
