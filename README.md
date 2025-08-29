@@ -1,11 +1,13 @@
 # Number Guessing Game CLI
 
-This is my fourth project in Go, completed as part of  
+This is my fourth project in Go, completed as part of
 the [Number Guessing Game project](https://roadmap.sh/projects/number-guessing-game) on roadmap.sh.
 
-The goal was to practice Go basics with user input, control flow, modular project structure, and simple persistence — by implementing a classic terminal game with scoring and difficulty levels.
+The goal was to practice Go basics with user input, control flow, modular project structure, and simple persistence — by
+implementing a classic terminal game with scoring and difficulty levels.
 
-The application is a command-line game where you try to guess a random number within limited chances, optionally using a one-time hint, and compete against your own high scores.
+The application is a command-line game where you try to guess a random number within limited chances, optionally using a
+one-time hint, and compete against your own high scores.
 
 ## Features
 
